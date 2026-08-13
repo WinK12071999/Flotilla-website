@@ -39,18 +39,43 @@ function ariaMobileMenu() {
   const nav = document.querySelector("[data-nav]");
   if (!toggle || !nav) return;
 
-  toggle.addEventListener("click", () => {
-    const isOpen = nav.classList.toggle("is-open");
+  const setOpen = (isOpen) => {
+    nav.classList.toggle("is-open", isOpen);
     toggle.setAttribute("aria-expanded", String(isOpen));
     toggle.classList.toggle("active", isOpen);
+    toggle.textContent = isOpen ? "Close" : "Menu";
+    document.body.classList.toggle("nav-open", isOpen);
+  };
+
+  toggle.addEventListener("click", (e) => {
+    e.stopPropagation();
+    setOpen(!nav.classList.contains("is-open"));
+  });
+
+  // Close when a nav link is tapped/clicked
+  nav.querySelectorAll("a").forEach((link) => {
+    link.addEventListener("click", () => setOpen(false));
   });
 
   // Close on outside click
   document.addEventListener("click", (e) => {
     if (nav.classList.contains("is-open") && !nav.contains(e.target) && !toggle.contains(e.target)) {
-      nav.classList.remove("is-open");
-      toggle.setAttribute("aria-expanded", "false");
-      toggle.classList.remove("active");
+      setOpen(false);
+    }
+  });
+
+  // Close on Escape
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && nav.classList.contains("is-open")) {
+      setOpen(false);
+      toggle.focus();
+    }
+  });
+
+  // Close if viewport grows back to desktop
+  window.addEventListener("resize", () => {
+    if (window.innerWidth > 900 && nav.classList.contains("is-open")) {
+      setOpen(false);
     }
   });
 }
@@ -283,12 +308,15 @@ function initChecklist() {
    ========================================================================== */
 function initForms() {
   const forms = document.querySelectorAll("form[data-subscribe], form[data-contact]");
+  const CONTACT_EMAIL = "drr@ottawapolice.ca";
 
   forms.forEach(form => {
-    form.addEventListener("submit", (e) => {
+    form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const isSubscribe = form.hasAttribute("data-subscribe");
+      const isContact = form.hasAttribute("data-contact");
       const submitBtn = form.querySelector("button[type='submit']");
+      const statusEl = form.querySelector("[data-contact-status], [data-subscribe-status]");
       const originalText = submitBtn ? submitBtn.innerHTML : "Submit";
 
       if (submitBtn) {
@@ -296,20 +324,67 @@ function initForms() {
         submitBtn.innerHTML = `<span class="spinner"></span> Sending...`;
       }
 
-      setTimeout(() => {
-        if (submitBtn) {
-          submitBtn.disabled = false;
-          submitBtn.innerHTML = originalText;
+      if (statusEl) {
+        statusEl.hidden = true;
+        statusEl.textContent = "";
+      }
+
+      // Newsletter: keep local confirmation for now (no mailing-list backend wired)
+      if (isSubscribe) {
+        setTimeout(() => {
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+          }
+          showToast("Miigwech! You've been subscribed to Flotilla updates.");
+          form.reset();
+        }, 1000);
+        return;
+      }
+
+      if (isContact) {
+        const formData = new FormData(form);
+        const payload = Object.fromEntries(formData.entries());
+        // Drop honeypot field from payload noise if empty
+        if (!payload._honey) delete payload._honey;
+
+        try {
+          const response = await fetch(`https://formsubmit.co/ajax/${CONTACT_EMAIL}`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json"
+            },
+            body: JSON.stringify(payload)
+          });
+
+          const result = await response.json().catch(() => ({}));
+
+          if (!response.ok) {
+            throw new Error(result.message || "Unable to send message.");
+          }
+
+          showToast("Miigwech! Your message has been sent successfully.");
+          if (statusEl) {
+            statusEl.hidden = false;
+            statusEl.style.color = "var(--mw-east)";
+            statusEl.textContent = `Message sent to ${CONTACT_EMAIL}.`;
+          }
+          form.reset();
+        } catch (err) {
+          showToast("Sorry — the message could not be sent. Please try again or call (343) 597-6699.");
+          if (statusEl) {
+            statusEl.hidden = false;
+            statusEl.style.color = "var(--mw-south)";
+            statusEl.textContent = "Send failed. Please email drr@ottawapolice.ca or call (343) 597-6699.";
+          }
+        } finally {
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+          }
         }
-
-        showToast(
-          isSubscribe
-            ? "Miigwech! You've been subscribed to Flotilla updates."
-            : "Miigwech! Your message has been sent successfully."
-        );
-
-        form.reset();
-      }, 1000);
+      }
     });
   });
 }
@@ -365,12 +440,21 @@ function initPartnersMarquee() {
   }
 }
 
+function isTouchOrMobile() {
+  return (
+    window.matchMedia("(max-width: 900px)").matches ||
+    window.matchMedia("(hover: none)").matches ||
+    window.matchMedia("(pointer: coarse)").matches
+  );
+}
+
 /* ==========================================================================
    10. Smooth 3D Tilt Effect (rAF-interpolated, glitch-free)
    ========================================================================== */
 function initParallaxAnd3D() {
-  // Respect users who prefer reduced motion
+  // Respect users who prefer reduced motion / touch devices (prevents layout shifting)
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  if (isTouchOrMobile()) return;
 
   const cards = document.querySelectorAll(".tilt-card");
 
@@ -438,6 +522,7 @@ function initParallaxAnd3D() {
    ========================================================================== */
 function initCursorSpotlights() {
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  if (isTouchOrMobile()) return;
 
   const glassCards = document.querySelectorAll(
     ".hero-card, .stat-card, .quad-card, .overview-card, .card-insta, .card-subscribe, .checklist-box, .content-card, .contact-card, .route-banner"
@@ -460,6 +545,7 @@ function initCursorSpotlights() {
    ========================================================================== */
 function initMagneticButtons() {
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  if (isTouchOrMobile()) return;
 
   const magneticBtns = document.querySelectorAll(".btn, .btn-nav-cta");
 

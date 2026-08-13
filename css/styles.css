@@ -16,6 +16,8 @@
 
   /* Modern 2026 Apple-Vibe Dark Glass Theme Palette */
   --bg-main: #060608;
+  --bg-card: rgba(18, 18, 24, 0.98);
+  --bg-subtle: rgba(255, 255, 255, 0.06);
   --bg-glass-card: rgba(255, 255, 255, 0.04);
   --bg-glass-card-hover: rgba(255, 255, 255, 0.08);
   --bg-glass-subtle: rgba(255, 255, 255, 0.06);
@@ -56,6 +58,9 @@
 html {
   scroll-behavior: smooth;
   font-size: 16px;
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
 }
 
 body {
@@ -70,6 +75,14 @@ body {
   line-height: 1.6;
   min-height: 100vh;
   overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
+  position: relative;
+}
+
+body.nav-open {
+  overflow: hidden;
+  touch-action: none;
 }
 
 img {
@@ -126,17 +139,18 @@ a {
 .site-header {
   position: sticky;
   top: 0;
-  z-index: 90;
-  background: transparent;
+  z-index: 200;
+  background: rgba(6, 6, 8, 0.72);
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: none;
-  transition: all 0.3s ease;
+  transition: background 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+  width: 100%;
 }
 
 .site-header.is-scrolled {
-  background: rgba(6, 6, 8, 0.5);
+  background: rgba(6, 6, 8, 0.92);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
@@ -146,17 +160,21 @@ a {
 .header-inner {
   max-width: var(--max-width);
   margin: 0 auto;
-  padding: 0.85rem 1.5rem;
+  padding: 0.85rem 1.25rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 2rem;
+  gap: 1rem;
+  position: relative;
+  width: 100%;
 }
 
 .brand {
   display: flex;
   align-items: center;
   gap: 1rem;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 /* Brand Logo Styling */
@@ -190,23 +208,35 @@ a {
   transform: translateY(-1px);
 }
 
+.brand > div {
+  min-width: 0;
+}
+
 .brand-text {
   font-family: var(--font-heading);
   font-weight: 700;
-  font-size: 1.15rem;
+  font-size: clamp(0.85rem, 3.4vw, 1.15rem);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--text-dark);
   line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  display: block;
 }
 
 .brand-subtitle {
   display: block;
   font-family: var(--font-body);
-  font-size: 0.75rem;
+  font-size: clamp(0.65rem, 2.4vw, 0.75rem);
   font-weight: 600;
   color: var(--mw-south);
   letter-spacing: 0.08em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Nav Pills (Glass Capsule) */
@@ -297,14 +327,25 @@ a {
 
 .menu-toggle {
   display: none;
-  border: 1px solid var(--line-color);
-  background: var(--bg-subtle);
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.08);
   color: var(--text-dark);
-  padding: 0.6rem 1.1rem;
+  padding: 0.55rem 1rem;
   border-radius: 999px;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 0.85rem;
   cursor: pointer;
+  flex-shrink: 0;
+  z-index: 210;
+  position: relative;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.menu-toggle:hover,
+.menu-toggle.active {
+  background: var(--mw-east);
+  color: var(--mw-west);
+  border-color: var(--mw-east);
 }
 
 /* ==========================================================================
@@ -1898,8 +1939,9 @@ a {
 
   .hero-card {
     grid-template-columns: 1fr;
-    padding: 2rem 1.5rem;
+    padding: 2rem 1.25rem;
     gap: 2rem;
+    transform: none !important;
   }
 
   .hero-card-bg {
@@ -1911,7 +1953,18 @@ a {
   }
 
   .hero-title {
-    font-size: 2.5rem;
+    font-size: clamp(1.85rem, 8vw, 2.5rem);
+  }
+
+  .hero-cta-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .hero-cta-group .btn {
+    width: 100%;
+    justify-content: center;
+    transform: none !important;
   }
 
   .med-wheel-grid {
@@ -1928,22 +1981,70 @@ a {
     grid-template-columns: 1fr;
   }
 
+  .countdown-card {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 1.25rem;
+    gap: 1.25rem;
+  }
+
+  .countdown-grid {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+
+  .countdown-unit {
+    min-width: 0;
+    width: 100%;
+    padding: 0.6rem 0.35rem;
+  }
+
+  .countdown-num {
+    font-size: clamp(1.1rem, 5vw, 1.45rem);
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.85rem;
+  }
+
+  .overview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .route-steps {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
   .menu-toggle {
-    display: block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .nav {
     position: absolute;
-    top: 100%;
-    left: 1.5rem;
-    right: 1.5rem;
+    top: calc(100% + 0.5rem);
+    left: 0.75rem;
+    right: 0.75rem;
     flex-direction: column;
     align-items: stretch;
-    background: var(--bg-card);
+    gap: 0.35rem;
+    background: rgba(12, 12, 18, 0.98);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
     border-radius: var(--radius-md);
-    padding: 1rem;
-    box-shadow: var(--shadow-md);
+    border: 1px solid var(--glass-border);
+    padding: 0.75rem;
+    box-shadow: var(--shadow-lg);
     display: none;
+    z-index: 220;
+    max-height: min(75vh, 520px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .nav.is-open {
@@ -1951,18 +2052,56 @@ a {
   }
 
   .nav a {
-    text-align: center;
-    padding: 0.75rem 1rem;
+    text-align: left;
+    padding: 0.85rem 1rem;
+    border-radius: var(--radius-sm);
+    width: 100%;
   }
 
-  .nav-dropdown-menu {
+  .nav a:hover,
+  .nav a[aria-current="page"] {
+    transform: none;
+  }
+
+  .nav-dropdown {
+    width: 100%;
     position: static;
+  }
+
+  .nav-dropdown > a {
+    display: block;
+  }
+
+  .nav-dropdown-menu,
+  .nav-dropdown:hover .nav-dropdown-menu,
+  .nav-dropdown:focus-within .nav-dropdown-menu {
+    position: static;
+    left: auto;
+    top: auto;
+    right: auto;
     transform: none;
     opacity: 1;
     pointer-events: auto;
     box-shadow: none;
     border: none;
-    padding: 0.25rem 0 0.25rem 1rem;
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    padding: 0.15rem 0 0.35rem 0.75rem;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .nav-dropdown-menu a {
+    font-size: 0.88rem;
+    color: var(--text-muted);
+    padding: 0.65rem 0.9rem;
+  }
+
+  .btn-nav-cta {
+    margin-left: 0 !important;
+    text-align: center !important;
+    margin-top: 0.25rem;
   }
 
   .route-banner {
@@ -1973,5 +2112,101 @@ a {
 
   .contact-form .row {
     grid-template-columns: 1fr;
+  }
+
+  .btn,
+  .btn-nav-cta {
+    transform: none !important;
+  }
+
+  .tilt-card,
+  .hero-card,
+  .stat-card,
+  .quad-card,
+  .overview-card {
+    transform: none !important;
+  }
+
+  .partners-marquee {
+    margin-left: -0.25rem;
+    margin-right: -0.25rem;
+  }
+
+  .footer-inner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1.25rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-inner {
+    padding: 0.7rem 0.9rem;
+  }
+
+  .hero,
+  .countdown-section,
+  .stats-section,
+  .section-med-wheel,
+  .section-overview,
+  .section-video,
+  .section-faq,
+  .section-partners,
+  .section-connect,
+  .page-body,
+  .page-header {
+    padding-left: 0.9rem;
+    padding-right: 0.9rem;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .countdown-grid {
+    gap: 0.4rem;
+  }
+
+  .countdown-label {
+    font-size: 0.6rem;
+  }
+
+  .hero-pill-anniversary,
+  .hero-pill-date {
+    font-size: 0.7rem;
+  }
+
+  .med-wheel-container,
+  .content-card,
+  .card-insta,
+  .card-subscribe {
+    padding: 1.25rem;
+    border-radius: 18px;
+  }
+
+  .section-title,
+  .page-title {
+    font-size: clamp(1.55rem, 7vw, 2rem);
+  }
+}
+
+/* Touch / coarse pointer: kill hover transforms that make the page feel unstable */
+@media (hover: none), (pointer: coarse) {
+  .tilt-card,
+  .hero-card,
+  .stat-card,
+  .quad-card,
+  .overview-card,
+  .btn,
+  .btn-nav-cta {
+    transform: none !important;
+  }
+
+  .hero-card:hover .hero-card-bg {
+    transform: none;
+  }
+
+  .partners-marquee:hover .partners-marquee-track {
+    animation-play-state: running;
   }
 }
