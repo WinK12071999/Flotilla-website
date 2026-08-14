@@ -9,7 +9,6 @@ document.addEventListener("DOMContentLoaded", () => {
   initScrollAnimations();
   initCountdown();
   initCounters();
-  initMedicineWheel();
   initAccordions();
   initChecklist();
   initForms();
@@ -74,7 +73,7 @@ function ariaMobileMenu() {
 
   // Close if viewport grows back to desktop
   window.addEventListener("resize", () => {
-    if (window.innerWidth > 900 && nav.classList.contains("is-open")) {
+    if (window.innerWidth > 1100 && nav.classList.contains("is-open")) {
       setOpen(false);
     }
   });
@@ -88,7 +87,7 @@ function initScrollAnimations() {
   if (!revealElements.length) return;
 
   // Automatically apply staggered delay indices to child grids for fluid flow
-  document.querySelectorAll(".stats-grid, .overview-grid, .med-quadrants-list, .contact-grid").forEach(grid => {
+  document.querySelectorAll(".stats-grid, .overview-grid, .med-quadrants-list, .contact-grid, .logo-grid").forEach(grid => {
     Array.from(grid.children).forEach((child, idx) => {
       child.style.setProperty("--stagger-index", idx);
       child.classList.add("reveal-up");
@@ -105,6 +104,8 @@ function initScrollAnimations() {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
         entry.target.classList.add("is-visible");
+        const grid = entry.target.closest(".logo-grid");
+        if (grid) grid.classList.add("is-lit");
       }
     });
   }, observerOptions);
@@ -113,6 +114,8 @@ function initScrollAnimations() {
     const rect = el.getBoundingClientRect();
     if (rect.top < window.innerHeight && rect.bottom > 0) {
       el.classList.add("is-visible");
+      const grid = el.closest(".logo-grid");
+      if (grid) grid.classList.add("is-lit");
     }
     observer.observe(el);
   });
@@ -329,8 +332,32 @@ function initForms() {
         statusEl.textContent = "";
       }
 
-      // Newsletter: keep local confirmation for now (no mailing-list backend wired)
+      // Newsletter: send to configured FormSubmit endpoint when present
       if (isSubscribe) {
+        const endpoint = form.getAttribute("action");
+        if (endpoint && endpoint.includes("formsubmit.co")) {
+          const formData = new FormData(form);
+          const payload = Object.fromEntries(formData.entries());
+          try {
+            const response = await fetch(endpoint, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Accept: "application/json" },
+              body: JSON.stringify(payload)
+            });
+            if (!response.ok) throw new Error("Subscribe failed");
+            showToast("Miigwech! You've been subscribed to Flotilla updates.");
+            form.reset();
+          } catch (err) {
+            showToast("Could not subscribe online. Please email drr@ottawapolice.ca.");
+          } finally {
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.innerHTML = originalText;
+            }
+          }
+          return;
+        }
+
         setTimeout(() => {
           if (submitBtn) {
             submitBtn.disabled = false;
@@ -415,34 +442,53 @@ function showToast(message) {
    9. Partners Marquee (seamless infinite slide)
    ========================================================================== */
 function initPartnersMarquee() {
-  const marquee = document.querySelector("[data-partners-marquee]");
-  if (!marquee) return;
+  const marquees = document.querySelectorAll("[data-partners-marquee], [data-logo-marquee]");
+  if (!marquees.length) return;
 
   // Reduced motion: CSS shows a static wrapped grid, no duplication needed
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-  const track = marquee.querySelector(".partners-marquee-track");
-  if (!track) return;
+  marquees.forEach(marquee => {
+    const track = marquee.querySelector(".partners-marquee-track, .logo-marquee-track");
+    if (!track || track.dataset.marqueeReady === "true") return;
 
-  // Duplicate the chips once so translateX(-50%) loops seamlessly
-  const items = Array.from(track.children);
-  items.forEach(item => {
-    const clone = item.cloneNode(true);
-    clone.setAttribute("aria-hidden", "true");
-    track.appendChild(clone);
+    const originals = Array.from(track.children);
+    if (!originals.length) return;
+
+    // Pad short rows so the strip is wide enough to feel continuous
+    const targetWidth = Math.max(marquee.clientWidth * 1.6, 700);
+    let guard = 0;
+    while (track.scrollWidth < targetWidth && guard < 8) {
+      originals.forEach(item => {
+        const clone = item.cloneNode(true);
+        clone.setAttribute("aria-hidden", "true");
+        clone.tabIndex = -1;
+        track.appendChild(clone);
+      });
+      guard++;
+    }
+
+    // Duplicate the full padded set once → seamless translateX(-50%) loop
+    Array.from(track.children).forEach(item => {
+      const clone = item.cloneNode(true);
+      clone.setAttribute("aria-hidden", "true");
+      clone.tabIndex = -1;
+      track.appendChild(clone);
+    });
+
+    const speed = Number(marquee.getAttribute("data-speed")) || 55;
+    const halfWidth = track.scrollWidth / 2;
+    if (halfWidth > 0) {
+      track.style.setProperty("--marquee-duration", `${(halfWidth / speed).toFixed(2)}s`);
+    }
+
+    track.dataset.marqueeReady = "true";
   });
-
-  // Keep speed constant regardless of how many partners are listed
-  const PIXELS_PER_SECOND = 55;
-  const halfWidth = track.scrollWidth / 2;
-  if (halfWidth > 0) {
-    track.style.setProperty("--marquee-duration", `${(halfWidth / PIXELS_PER_SECOND).toFixed(2)}s`);
-  }
 }
 
 function isTouchOrMobile() {
   return (
-    window.matchMedia("(max-width: 900px)").matches ||
+    window.matchMedia("(max-width: 1100px)").matches ||
     window.matchMedia("(hover: none)").matches ||
     window.matchMedia("(pointer: coarse)").matches
   );
@@ -565,7 +611,7 @@ function initMagneticButtons() {
 }
 
 /* ==========================================================================
-   13. YouTube Video Facade Player
+   13. YouTube / CTV Video Facade Players
    ========================================================================== */
 function playVideo(wrapperId, videoId) {
   // YouTube embeds require a valid HTTP origin. When the site is opened
@@ -583,6 +629,33 @@ function playVideo(wrapperId, videoId) {
       src="https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1" 
       title="Flotilla for Friendship Video" 
       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+      referrerpolicy="strict-origin-when-cross-origin"
+      allowfullscreen>
+    </iframe>
+  `;
+}
+
+function playCtvVideo(wrapperId) {
+  const ctvUrl = "https://www.ctvnews.ca/ottawa/video/2026/08/13/flotilla-for-friendships-25th-anniversary/";
+  const embedUrl = "https://embed.jasperplayer.com/?brand=ctv_news&destination=ctvnews_web&language=EN&contentId=3427443";
+
+  // file:// and many local previews block third-party video embeds — open CTV directly
+  if (window.location.protocol === "file:") {
+    window.open(ctvUrl, "_blank", "noopener");
+    return;
+  }
+
+  const wrapper = document.getElementById(wrapperId);
+  if (!wrapper) {
+    window.open(ctvUrl, "_blank", "noopener");
+    return;
+  }
+
+  wrapper.innerHTML = `
+    <iframe
+      src="${embedUrl}"
+      title="Flotilla for Friendship's 25th Anniversary — CTV News"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
       referrerpolicy="strict-origin-when-cross-origin"
       allowfullscreen>
     </iframe>
